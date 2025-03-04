@@ -90,10 +90,8 @@ env = simpy.Environment()
 supply_chain = SupplyChain(env)
 env.run(until=SIMULATION_DAYS)
 
-# Convert data to DataFrame
 columns = ["Day", "Customer Demand", "Inventory Level", "Lost Sales", "Holding Cost", "Stockout Cost", "Total Ordering Cost"]
 df = pd.DataFrame(supply_chain.daily_data, columns=columns)
 
-# Save the results
 df.to_csv("supply_chain_simpy_simulation.csv", index=False)
 print("Simulation complete. Data saved to 'supply_chain_simpy_simulation.csv'.")
