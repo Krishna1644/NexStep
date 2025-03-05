@@ -45,9 +45,8 @@ class SupplyChain:
                 lost_sales = 0
             else:
                 lost_sales = customer_demand - self.inventory
-                self.inventory = 0  # Stockout occurs
+                self.inventory = 0
 
-            # Track costs
             holding_cost = self.inventory * HOLDING_COST_PER_UNIT
             stockout_cost = lost_sales * STOCKOUT_COST_PER_UNIT
             self.total_holding_cost += holding_cost
@@ -58,7 +57,7 @@ class SupplyChain:
                 holding_cost, stockout_cost, self.total_ordering_cost
             ])
 
-            yield self.env.timeout(1)  # Wait for the next day
+            yield self.env.timeout(1)
 
     def inventory_management(self):
         """Monitors inventory and places orders when stock is low."""
@@ -66,7 +65,6 @@ class SupplyChain:
             if self.inventory < REORDER_POINT:
                 delay = LEAD_TIME + DELIVERY_TIME
                 
-                # Possible disruption
                 if np.random.rand() < DISRUPTION_PROBABILITY:
                     delay += np.random.randint(DISRUPTION_EXTRA_DELAY[0], DISRUPTION_EXTRA_DELAY[1] + 1)
 
@@ -74,10 +72,9 @@ class SupplyChain:
                 self.total_ordering_cost += ORDERING_COST
                 print(f'Day {self.env.now}: Order placed, arriving in {delay} days')
 
-                # Process the order arrival event
                 self.env.process(self.receive_order(delay, ORDER_QUANTITY))
 
-            yield self.env.timeout(1)  # Check inventory daily
+            yield self.env.timeout(1)
 
     def receive_order(self, delay, quantity):
         """Handles order arrivals after lead time."""
