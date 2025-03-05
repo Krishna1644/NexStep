@@ -25,6 +25,7 @@ class SupplyChain:
         self.env = env
         self.inventory = INITIAL_INVENTORY
         self.pending_orders = []
+        self.order_pending = False
 
         self.total_holding_cost = 0
         self.total_stockout_cost = 0
@@ -74,7 +75,6 @@ class SupplyChain:
                 print(f'Day {self.env.now}: Order placed, arriving in {delay} days')
 
                 self.env.process(self.receive_order(delay, ORDER_QUANTITY))
-
             yield self.env.timeout(1)
 
     def receive_order(self, delay, quantity):
