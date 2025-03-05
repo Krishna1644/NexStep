@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Simulation Parameters
-SIMULATION_DAYS = 100
+SIMULATION_DAYS = 7
 INITIAL_INVENTORY = 50
 REORDER_POINT = 20
 ORDER_QUANTITY = 50
