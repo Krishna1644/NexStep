@@ -62,9 +62,10 @@ class SupplyChain:
     def inventory_management(self):
         """Monitors inventory and places orders when stock is low."""
         while True:
-            if self.inventory < REORDER_POINT:
+            if self.inventory < REORDER_POINT and not self.order_pending:
+                self.order_pending = True  # Mark order as pending
+
                 delay = LEAD_TIME + DELIVERY_TIME
-                
                 if np.random.rand() < DISRUPTION_PROBABILITY:
                     delay += np.random.randint(DISRUPTION_EXTRA_DELAY[0], DISRUPTION_EXTRA_DELAY[1] + 1)
 
@@ -80,6 +81,7 @@ class SupplyChain:
         """Handles order arrivals after lead time."""
         yield self.env.timeout(delay)
         self.inventory += quantity
+        self.order_pending = False  # Reset flag after order is received
         print(f'Day {self.env.now}: Order received, new inventory = {self.inventory}')
 
 # Run the simulation
