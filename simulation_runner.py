@@ -1,4 +1,5 @@
 import simpy
+import pandas as pd
 from data_generator import DataGenerator
 from Store import Store
 from supplier import Supplier
@@ -14,24 +15,6 @@ VOLATILITY = 5  # Standard deviation of random daily demand fluctuations (higher
 SHOCK_PROBABILITY = 0.15  # Probability (0-1) of an unexpected demand spike or drop on a given day
 SEED = 1  # Fixed random seed for reproducibility; set to None for different results each run
 
-"""
-Parameters:
-- SEASONALITY_FACTOR: Defines the amplitude of cyclical fluctuations in demand, simulating seasonal trends.
-  Measured in demand units, where higher values cause stronger up-and-down variations.
-
-- TREND_FACTOR: Represents the long-term change in demand per day. A positive value means growing demand,
-  while a negative value indicates declining demand. Measured in demand units per day.
-
-- VOLATILITY: Controls the randomness in daily demand, acting as the standard deviation of demand noise.
-  Measured in demand units, where higher values lead to more unpredictable demand shifts.
-
-- SHOCK_PROBABILITY: The likelihood (0 to 1) that a significant market event occurs, causing a demand spike
-  or drop. Higher values increase the chance of extreme variations.
-
-- SEED: A fixed number that ensures the same random values are generated across runs for reproducibility.
-  If set to None, demand will vary with each execution.
-"""
-
 # --------------------------
 # Simulation Parameters
 # --------------------------
@@ -39,6 +22,7 @@ SIMULATION_DAYS = 100
 SELLING_PRICE_PER_UNIT = 50  # Revenue per unit sold
 HOLDING_COST_PER_UNIT = 0.5  # Cost per unit stored per day
 STOCKOUT_PENALTY_PER_UNIT = 10  # Penalty for unfulfilled demand
+OUTPUT_CSV_FILE = "simulation_results.csv"
 
 # --------------------------
 # Simulation Runner
@@ -60,13 +44,14 @@ def run_simulation(supply_chain_class, test_name, demand_data):
         Supplier("Expedited", reliability=1.0, cost_multiplier=2.0, delivery_time_range=(1, 2), per_unit_price=40, shipping_cost=200) 
     ]
   
-
     if "Fixed" in test_name:
-            fixed_supplier = next(s for s in suppliers if s.name == "Normal")
-            supply_chain = supply_chain_class(env, store, fixed_supplier, demand_data) 
+        fixed_supplier = next(s for s in suppliers if s.name == "Normal")
+        supply_chain = supply_chain_class(env, store, fixed_supplier, demand_data) 
     else:
         supply_chain = supply_chain_class(env, store, suppliers, demand_data)  
 
+    # Data logging
+    data_log = []
 
     for day in range(len(demand_data)):
         env.run(until=day + 1)
@@ -79,9 +64,23 @@ def run_simulation(supply_chain_class, test_name, demand_data):
         total_stockout_cost += daily_stockout_cost
         total_revenue += daily_revenue
 
-    total_costs = total_supplier_cost + total_holding_cost + total_stockout_cost
-    profit = total_revenue - total_costs
-    roi = (profit / total_costs) * 100 if total_costs > 0 else 0
+        total_costs = total_supplier_cost + total_holding_cost + total_stockout_cost
+        profit = total_revenue - total_costs
+        roi = (profit / total_costs) * 100 if total_costs > 0 else 0
+
+        data_log.append([
+            day, store.inventory, demand_data[day], store.demand_history[-1] if store.demand_history else 0,
+            store.stockouts, len(store.order_history), store.supplier_history[-1] if store.supplier_history else None,
+            daily_holding_cost, daily_stockout_cost, daily_revenue, total_supplier_cost,
+            total_revenue, total_costs, profit, roi
+        ])
+
+    df = pd.DataFrame(data_log, columns=[
+        "Day", "Inventory", "Daily Demand", "Fulfilled Demand", "Stockouts", "Orders Placed", "Supplier Used", 
+        "Daily Holding Cost", "Daily Stockout Cost", "Daily Revenue", "Total Supplier Cost",
+        "Cumulative Revenue", "Cumulative Costs", "Cumulative Profit", "ROI"
+    ])
+    df.to_csv(OUTPUT_CSV_FILE, index=False)
 
     print(f"\n=== Test Case: {test_name} ===")
     print(f"Final Inventory: {store.inventory}")
@@ -92,17 +91,24 @@ def run_simulation(supply_chain_class, test_name, demand_data):
     print(f"Total Costs: ${total_costs:.2f}")
     print(f"Profit: ${profit:.2f}")
     print(f"ROI: {roi:.2f}%")
+    print(f"Simulation results saved to {OUTPUT_CSV_FILE}")
 
 if __name__ == "__main__":
-    # Generate shared demand data with improved seasonality, trend, and shocks
     data_generator = DataGenerator(sim_days=SIMULATION_DAYS, seasonality_factor=SEASONALITY_FACTOR, trend_factor=TREND_FACTOR, volatility=VOLATILITY, shock_prob=SHOCK_PROBABILITY, seed=SEED)
     shared_demand_data = data_generator.generate_demand_data()
 
     print("\n=== Fixed Order Model ===")
     run_simulation(FixedOrderSupplyChain, "Fixed_Model", shared_demand_data)
 
-    #For Future. DO NO UNCOMMENT
-"""
+    # For Future. DO NO UNCOMMENT
+    """
     print("\n=== Optimized ML Model ===")
     run_simulation(OptimizedMLSupplyChain, "Optimized_Model_ML", shared_demand_data)
-"""
+    """
+    with open("simulation_results.csv", "a") as f:
+        f.write("\n# Data Generation Specifications\n")
+        f.write(f"SEASONALITY_FACTOR: {SEASONALITY_FACTOR}\n")
+        f.write(f"TREND_FACTOR: {TREND_FACTOR}\n")
+        f.write(f"VOLATILITY: {VOLATILITY}\n")
+        f.write(f"SHOCK_PROBABILITY: {SHOCK_PROBABILITY}\n")
+        f.write(f"SEED: {SEED}\n")
