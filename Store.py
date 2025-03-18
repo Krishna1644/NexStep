@@ -28,7 +28,7 @@ class Store:
         """Fulfill demand while tracking stockouts and revenue"""
         fulfilled = min(self.inventory, demand)
         self.inventory -= fulfilled
-        self.demand_history.append(demand)
+        self.demand_history.append(int(demand))
         if fulfilled < demand:
             self.stockouts += (demand - fulfilled)
 

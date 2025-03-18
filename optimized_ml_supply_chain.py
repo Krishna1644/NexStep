@@ -45,6 +45,7 @@ class OptimizedMLSupplyChain:
 
             self.receive_pending_orders()
 
+            self.store.demand_history = [int(x) for x in self.store.demand_history]
             if len(self.store.demand_history) >= self.lookback:
                 avg_demand = sum(self.store.demand_history[-self.lookback:]) / self.lookback
                 depletion_rate = (self.store.demand_history[-1] - self.store.demand_history[0]) / self.lookback
