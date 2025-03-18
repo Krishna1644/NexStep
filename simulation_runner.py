@@ -10,19 +10,19 @@ from optimized_ml_supply_chain import OptimizedMLSupplyChain
 # --------------------------
 # Data Generation Parameters
 # --------------------------
-SEASONALITY_FACTOR = 5  # Amplitude of seasonal demand variations (higher value = stronger fluctuations)
-TREND_FACTOR = 0.05  # Rate of long-term demand increase (+) or decrease (-) per day
-VOLATILITY = 5  # Standard deviation of random daily demand fluctuations (higher value = more randomness)
-SHOCK_PROBABILITY = 0.15  # Probability (0-1) of an unexpected demand spike or drop on a given day
-SEED = 1  # Fixed random seed for reproducibility; set to None for different results each run
+SEASONALITY_FACTOR = 5
+TREND_FACTOR = 0.05
+VOLATILITY = 5
+SHOCK_PROBABILITY = 0.15
+SEED = 1
 
 # --------------------------
 # Simulation Parameters
 # --------------------------
 SIMULATION_DAYS = 100
-SELLING_PRICE_PER_UNIT = 50  # Revenue per unit sold
-HOLDING_COST_PER_UNIT = 0.5  # Cost per unit stored per day
-STOCKOUT_PENALTY_PER_UNIT = 10  # Penalty for unfulfilled demand
+SELLING_PRICE_PER_UNIT = 50
+HOLDING_COST_PER_UNIT = 0.5
+STOCKOUT_PENALTY_PER_UNIT = 10
 
 # Prepare CSV logging
 csv_data = []
@@ -53,12 +53,19 @@ def run_simulation(supply_chain_class, test_name, demand_data):
 
     for day in range(len(demand_data)):
         env.run(until=day + 1)
-        
+
         daily_holding_cost = store.inventory * HOLDING_COST_PER_UNIT
         daily_stockout_cost = store.stockouts * STOCKOUT_PENALTY_PER_UNIT
         daily_revenue = sum(store.demand_history) * SELLING_PRICE_PER_UNIT
         supplier_name = store.supplier_history[-1] if store.supplier_history else "None"
         order_quantity = store.order_history[-1] if store.order_history else 0
+
+        # ✅ Correctly updating supplier cost when an order is placed
+        if order_quantity > 0:
+            selected_supplier = next((s for s in suppliers if s.name == supplier_name), None)
+            if selected_supplier:
+                order_cost = selected_supplier.get_cost(order_quantity)
+                total_supplier_cost += order_cost  # ✅ Increment total supplier cost
 
         total_holding_cost += daily_holding_cost
         total_stockout_cost += daily_stockout_cost
@@ -110,7 +117,7 @@ if __name__ == "__main__":
     print("\n=== Fixed Order Model ===")
     run_simulation(FixedOrderSupplyChain, "Fixed_Model", shared_demand_data)
 
-    # DO NOT UNCOMMENT
+    # Uncomment to run ML-based model
     """
     print("\n=== Optimized ML Model ===")
     run_simulation(OptimizedMLSupplyChain, "Optimized_Model_ML", shared_demand_data)
